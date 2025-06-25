@@ -1,0 +1,68 @@
+services:
+
+  # 🐇 RabbitMQ untuk antrian antar service
+  rabbitmq:
+    image: rabbitmq:3.9-management-alpine
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"     # Port komunikasi antar service
+      - "15672:15672"   # Port UI RabbitMQ
+
+  # 🍃 MongoDB untuk penyimpanan produk/stok
+  mongo:
+    image: mongo:6
+    container_name: mongo
+    ports:
+      - "27017:27017"
+
+  # 🔐 Auth Service (JWT Login)
+  auth-service:
+    build: ./auth-service
+    container_name: auth-service
+    ports:
+      - "3001:3000"
+    environment:
+      - JWT_SECRET=RAHASIA_SUPER_AMAN_UAS_SAYA
+
+  # 📦 Order Service (menerima order dan publish ke RabbitMQ)
+  order-service:
+    build: ./order-service
+    container_name: order-service
+    ports:
+      - "3002:3000"
+    depends_on:
+      - rabbitmq
+    environment:
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+
+  # 🚚 Delivery Service (worker konsumsi order_queue)
+  delivery-service:
+    build: ./delivery-service
+    container_name: delivery-service
+    depends_on:
+      - rabbitmq
+    environment:
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+
+  # 📦 Stock Service (CRUD & scan stok dengan MongoDB)
+  stock-service:
+    build: ./stock-service
+    container_name: stock-service
+    ports:
+      - "3003:3000"
+    depends_on:
+      - mongo
+    environment:
+      - MONGO_URL=mongodb://mongo:27017/warehouse
+      - JWT_SECRET=RAHASIA_SUPER_AMAN_UAS_SAYA
+
+  # 🌐 API Gateway (Nginx sebagai reverse proxy)
+  api-gateway:
+    build: ./api-gateway
+    container_name: api-gateway
+    ports:
+      - "80:80"
+    depends_on:
+      - auth-service
+      - order-service
+      - stock-service
