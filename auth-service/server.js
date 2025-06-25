@@ -1,7 +1,17 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
+const rateLimit = require('express-rate-limit');
 const app = express();
 app.use(express.json());
+
+
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 menit
+  max: 100, // Maksimal 100 permintaan per IP
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use(limiter);
 
 const PORT = 3000;
 const JWT_SECRET = process.env.JWT_SECRET;

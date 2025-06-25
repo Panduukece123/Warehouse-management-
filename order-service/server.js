@@ -26,7 +26,12 @@ async function connectRabbitMQ() {
 
 app.post('/orders', (req, res) => {
   const orderData = req.body;
-  if (!orderData.productId || !orderData.quantity) return res.status(400).json({ message: 'Data order tidak lengkap' });
+  
+  // DIUBAH: Validasi sekarang menggunakan 'sku', bukan 'productId'
+  if (!orderData.sku || !orderData.quantity) {
+    return res.status(400).json({ message: 'Data order tidak lengkap. Pastikan ada "sku" dan "quantity".' });
+  }
+  
   try {
     const orderPayload = Buffer.from(JSON.stringify(orderData));
     channel.sendToQueue('order_queue', orderPayload, { persistent: true });

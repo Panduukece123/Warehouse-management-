@@ -1,12 +1,11 @@
 services:
-
   # 🐇 RabbitMQ untuk antrian antar service
   rabbitmq:
     image: rabbitmq:3.9-management-alpine
     container_name: rabbitmq
     ports:
-      - "5672:5672"     # Port komunikasi antar service
-      - "15672:15672"   # Port UI RabbitMQ
+      - "5672:5672" # Port komunikasi antar service
+      - "15672:15672" # Port UI RabbitMQ
 
   # 🍃 MongoDB untuk penyimpanan produk/stok
   mongo:
@@ -19,10 +18,10 @@ services:
   auth-service:
     build: ./auth-service
     container_name: auth-service
-    ports:
-      - "3001:3000"
+    # ports:
+    #   - "3001:3000"
     environment:
-      - JWT_SECRET=RAHASIA_SUPER_AMAN_UAS_SAYA
+      - JWT_SECRET=${JWT_SECRET}
 
   # 📦 Order Service (menerima order dan publish ke RabbitMQ)
   order-service:
@@ -43,6 +42,8 @@ services:
       - rabbitmq
     environment:
       - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+      - INTERNAL_API_KEY=${INTERNAL_API_KEY} # BARU: Untuk otentikasi ke stock-service
+      - STOCK_SERVICE_URL=http://stock-service:3000 # BARU: Alamat stock-service
 
   # 📦 Stock Service (CRUD & scan stok dengan MongoDB)
   stock-service:
@@ -54,7 +55,8 @@ services:
       - mongo
     environment:
       - MONGO_URL=mongodb://mongo:27017/warehouse
-      - JWT_SECRET=RAHASIA_SUPER_AMAN_UAS_SAYA
+      - JWT_SECRET=${JWT_SECRET}
+      - INTERNAL_API_KEY=${INTERNAL_API_KEY} # BARU: Untuk validasi panggilan internal
 
   # 🌐 API Gateway (Nginx sebagai reverse proxy)
   api-gateway:
